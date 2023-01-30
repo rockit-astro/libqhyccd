@@ -8,6 +8,6 @@ all:
 	mkdir -p build
 	${RPMBUILD} -ba libqhyccd.spec
 
-	mv build/aarch64/*.rpm .
+	mv build/*/*.rpm .
 	rm -rf build
 

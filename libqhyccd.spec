@@ -5,7 +5,7 @@ Url:       https://github.com/warwick-one-metre/libqhyccd
 Summary:   QHYCCD camera SDK repackaged for Rocky Linux
 License:   Proprietary
 Group:     Unspecified
-BuildArch: aarch64
+BuildArch: x86_64 aarch64
 
 %description
 
@@ -14,7 +14,12 @@ QHYCCD camera SDK repackaged for Rocky Linux.
 %build
 
 mkdir %{buildroot}
+
+%ifarch aarch64
 tar xf %{_sourcedir}/sdk_Arm64_22.07.25.tgz -C %{buildroot} --strip-components=1
+%else
+tar xf %{_sourcedir}/sdk_linux64_22.07.25.tgz -C %{buildroot} --strip-components=1
+%endif
 
 mv %{buildroot}/usr/local/lib %{buildroot}/usr/lib64
 mv %{buildroot}/sbin %{buildroot}%{_sbindir}
