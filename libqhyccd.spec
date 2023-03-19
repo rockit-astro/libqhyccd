@@ -1,13 +1,13 @@
 %global __requires_exclude                     ^libqhyccd.so.20
 Name:      libqhyccd
-Version:   20220725
+Version:   20230228
 Release:   1
 Url:       https://github.com/warwick-one-metre/libqhyccd
 Summary:   QHYCCD camera SDK repackaged for Rocky Linux
 License:   Proprietary
 Group:     Unspecified
 Requires:  libusbx opencv
-BuildArch: x86_64 aarch64 opencv-devel
+BuildArch: x86_64 aarch64
 
 %description
 
@@ -18,9 +18,9 @@ QHYCCD camera SDK repackaged for Rocky Linux.
 mkdir %{buildroot}
 
 %ifarch aarch64
-tar xf %{_sourcedir}/sdk_Arm64_22.07.25.tgz -C %{buildroot} --strip-components=1
+tar xf %{_sourcedir}/sdk_Arm64_23.02.28.tgz -C %{buildroot} --strip-components=1
 %else
-tar xf %{_sourcedir}/sdk_linux64_22.07.25.tgz -C %{buildroot} --strip-components=1
+tar xf %{_sourcedir}/sdk_linux64_23.02.28.tgz -C %{buildroot} --strip-components=1
 %endif
 
 mv %{buildroot}/usr/local/lib %{buildroot}/usr/lib64
@@ -43,16 +43,16 @@ rm %{buildroot}/usr/lib64/libqhyccd.a
 #
 # 1. Disassemble the offending function with `objdump --disassemble=_Z15StopAsyQCamLivePv /path/to/libqhyccd.so`
 # 2. Search the output for `<free@plt>`
-# 3. Scroll backwards to the second `adrp` instruction, this is the start address (e.g. `107684`)
-# 4. Scroll forward to the instruction after `str	xzr`, this is the end address (e.g. `1076f0`)
-# 5. Convert instructions from hex to decimal and find the length (e.g. start = `1078916`, length = `108`)
+# 3. Scroll backwards to the second `adrp` instruction, this is the start address (e.g. `112db4`)
+# 4. Scroll forward to the instruction after `str	xzr`, this is the end address (e.g. `112e20`)
+# 5. Convert instructions from hex to decimal and find the length (e.g. start = `1125812`, length = `108`)
 # 6. Divide length by 4 to find the number of instructions (e.g. count = `27`)
 
 # 7. Create a temporary file with <count> nop instructions:
 for i in {1..27}; do echo -e -n "\x1f\x20\x03\xd5" >> nop.bin; done
 
 # 8. Insert the nops into the library:
-dd if=nop.bin of=%{buildroot}/usr/lib64/libqhyccd.so.22.7.25.16 bs=1 seek=1078916 conv=notrunc
+dd if=nop.bin of=%{buildroot}/usr/lib64/libqhyccd.so.23.2.28.14 bs=1 seek=1125812 conv=notrunc
 rm nop.bin
 
 %endif
