@@ -25,7 +25,9 @@ jobs:
             --volume "${PWD}/artifacts:/artifacts"
           run: |
             cat /etc/redhat-release
-            yum -y install rpm-build rpm-sign make systemd-rpm-macros
+            yum -y install epel-release
+            yum -y config-manager --set-enabled crb
+            yum -y install rpm-build rpm-sign make systemd-rpm-macros opencv-devel gcc
             make
             mv *.rpm /artifacts
       - name: Package aarch64 RPM
@@ -39,7 +41,9 @@ jobs:
             --volume "${PWD}/artifacts:/artifacts"
           run: |
             cat /etc/redhat-release
-            yum -y install rpm-build rpm-sign make systemd-rpm-macros
+            yum -y install epel-release
+            yum -y config-manager --set-enabled crb
+            yum -y install rpm-build rpm-sign make systemd-rpm-macros opencv-devel gcc
             make
             mv *.rpm /artifacts
       - name: Clone Package Repository
