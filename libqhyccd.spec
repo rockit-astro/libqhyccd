@@ -36,11 +36,14 @@ rm -rf %{buildroot}/etc
 rm %{buildroot}/*.sh
 rm %{buildroot}/usr/lib64/libqhyccd.a
 
+
+# The _Z15StopAsyQCamLivePv function appears to be freeing and then nulling a buffer that is still needed by libusb.
+# This leads to libusb writing into freed memory, causing corruption and generally crashing.
+# We can avoid this by patching an `if (buffer != NULL)` check to `if (false)` - i.e. never free the buffer
+# We can then avoid this patch from causing a memory leak by also skipping past a subsequent `buffer = NULL`
+# assignment - the library already does the right thing, freeing it later!
+
 %ifarch aarch64
-# The _Z15StopAsyQCamLivePv function seems to be freeing and nulling out a buffer that is still needed by libusb.
-# We need to replace the instructions that do this with nops to avoid corrupting the heap and crashing.
-# Procedure:
-#
 # 1. Disassemble the offending function with `objdump --disassemble=_Z15StopAsyQCamLivePv /path/to/libqhyccd.so`
 # 2. Search the output for `<free@plt>`
 # 3. Scroll backwards to the second `adrp` instruction, this is the start address (e.g. `112db4`)
@@ -55,6 +58,23 @@ for i in {1..27}; do echo -e -n "\x1f\x20\x03\xd5" >> nop.bin; done
 dd if=nop.bin of=%{buildroot}/usr/lib64/libqhyccd.so.23.2.28.14 bs=1 seek=1125812 conv=notrunc
 rm nop.bin
 
+%else
+# 1. Disassemble the offending function with `objdump --disassemble=_Z15StopAsyQCamLivePv /path/to/libqhyccd.so`
+# 2. Search the output for `<free@plt>`
+#    e.g. `113851:  e8 8a eb fe ff    callq    1023e0 <free@plt>`
+# 3. Scroll backwards a few lines to find the `je` instruction that jumps to the address of the instruction following the free call
+#    e.g. `11382d: 74 27    je    113856 <_Z15StopAsyQCamLivePv+0x1e7>`
+#    Here, 0x74 is the opcode for "jump if ZF=1". ZF is the zero flag, which here is being set by a TEST instruction just above.
+#    We can make this always jump by using instead 0x71 (jump if OF=0), as TEST clears the overflow flag to zero.
+#    The 27 is the number of bytes (in hexadecimal) to jump by, which we want to increase to also skip the null assignment.
+#    Note the address of this instruction in decimal for use by `dd` below (e.g. 11382d = 1128493)
+# 4. Scroll forward a few lines from the `free` to find the instruction that assigns 0 to the address of the buffer
+#    e.g. `113872:  48 c7 00 00 00 00 00    movq    $0x0,(%rax)`
+# 5. The new jump offset is going to be the number of bytes between the *end* of the je/jno instruction and the *end* of the movq instruction
+#    (e.g. here (113872 + 7) - (11382d + 2) = 0x4a)
+# 6. Patch the new jump behaviour:
+
+printf '\x71\x4a' | dd of=%{buildroot}/usr/lib64/libqhyccd.so.23.2.28.14 bs=1 seek=1128493 conv=notrunc
 %endif
 
 # libqhyccd.so doesn't properly link against OpenCV, which causes 'symbol not found' errors when attempting to load it.
