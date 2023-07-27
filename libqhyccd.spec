@@ -46,17 +46,26 @@ rm %{buildroot}/usr/lib64/libqhyccd.a
 %ifarch aarch64
 # 1. Disassemble the offending function with `objdump --disassemble=_Z15StopAsyQCamLivePv /path/to/libqhyccd.so`
 # 2. Search the output for `<free@plt>`
-# 3. Scroll backwards to the second `adrp` instruction, this is the start address (e.g. `112db4`)
-# 4. Scroll forward to the instruction after `str	xzr`, this is the end address (e.g. `112e20`)
-# 5. Convert instructions from hex to decimal and find the length (e.g. start = `1125812`, length = `108`)
-# 6. Divide length by 4 to find the number of instructions (e.g. count = `27`)
+#    e.g. `112dfc: 97ff9d31 bl fa2c0 <free@plt>`
+# 3. Scroll backwards a few lines to find the `b.eq` instruction that jumps to the address of the instruction following the free call
+#    e.g. `112dd8: 54000140 b.eq 112e00 <_Z15StopAsyQCamLivePv+0x198> // b.none`
+#    Here, 54000140 encodes a bit pattern 0101 0100 0000 0000 0000 0001 0100 0000
+#    where bits   0-3 encode the branch condition
+#          bit      4 is always 0
+#          bits  5-23 encode a 19 bit relative offset (number of bytes to jump divided by 4)
+#          bit     24 is always 0
+#          bits 25-31 encode the "branch" opcode
+#    The imm19 offset (000 0000 0000 0000 1010 = 0x0A = 10) * 4 = jump forward by 40 bytes, from 112dd8 to 112e00.
+#    We can make this always jump by changing the branch condition from "if equal" (0000) to "always true" (1110)
+#    Note the address of this instruction in decimal for use by `dd` below (e.g. 112dd8 = 1125848)
+# 4. Scroll forward a few lines from the `free` to find the instruction that assigns 0 to the address of the buffer
+#    e.g. `112e1c: f900ec1f str xzr, [x0, #472]`
+# 5. The new jump offset is going to be the number of bytes between the *start* of the branch instruction and the *end* of the str instruction
+#    (e.g. here (112e1c + 4) - 112dd8 = 0x48), which is then divided by 4 to give an offset bit pattern of 0x48 / 4 = 0x12 = 000 0000 0000 0001 0010
+#    The new jump instruction is therefore 0101 0100 0000 0000 0000 0010 0100 1110 = 5400024E
+# 6. Patch the new jump behaviour (note: little endian, so smallest byte first!):
 
-# 7. Create a temporary file with <count> nop instructions:
-for i in {1..27}; do echo -e -n "\x1f\x20\x03\xd5" >> nop.bin; done
-
-# 8. Insert the nops into the library:
-dd if=nop.bin of=%{buildroot}/usr/lib64/libqhyccd.so.23.2.28.14 bs=1 seek=1125812 conv=notrunc
-rm nop.bin
+printf '\x4E\x02' | dd of=%{buildroot}/usr/lib64/libqhyccd.so.23.2.28.14 bs=1 seek=1125848 conv=notrunc
 
 %else
 # 1. Disassemble the offending function with `objdump --disassemble=_Z15StopAsyQCamLivePv /path/to/libqhyccd.so`
