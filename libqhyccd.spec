@@ -2,7 +2,7 @@
 Name:      libqhyccd
 Version:   20230228
 Release:   1
-Url:       https://github.com/warwick-one-metre/libqhyccd
+Url:       https://github.com/rockit-astro/libqhyccd
 Summary:   QHYCCD camera SDK repackaged for Rocky Linux
 License:   Proprietary
 Group:     Unspecified
