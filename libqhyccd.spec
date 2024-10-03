@@ -1,7 +1,7 @@
 %global __requires_exclude                     ^libqhyccd.so.20
 Name:      libqhyccd
 Version:   20230228
-Release:   1
+Release:   2
 Url:       https://github.com/rockit-astro/libqhyccd
 Summary:   QHYCCD camera SDK repackaged for Rocky Linux
 License:   Proprietary
@@ -25,6 +25,7 @@ tar xf %{_sourcedir}/sdk_linux64_23.02.28.tgz -C %{buildroot} --strip-components
 
 mv %{buildroot}/usr/local/lib %{buildroot}/usr/lib64
 mv %{buildroot}/sbin %{buildroot}%{_sbindir}
+mv %{buildroot}/usr/local/include/ %{buildroot}%{_includedir}
 
 mkdir -p %{buildroot}%{_udevrulesdir}
 mv %{buildroot}/lib/udev/rules.d/85-qhyccd.rules %{buildroot}%{_udevrulesdir}
@@ -98,8 +99,15 @@ gcc -shared -o %{buildroot}/usr/lib64/libqhyshim.so -L%{buildroot}/usr/lib64/ -l
 
 %defattr(0644,root,root,0644)
 %{_udevrulesdir}/85-qhyccd.rules
+
 %{_datadir}/usb/a3load.hex
 /lib/firmware/qhy/*.img
 /lib/firmware/qhy/*.HEX
+
+%package devel
+Summary: Development files for using the QHYCCD library
+%description devel
+%files devel
+%{_includedir}/*.h
 
 %changelog
