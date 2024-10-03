@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Clone Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Package x86_64 RPM
         uses: uraimo/run-on-arch-action@v2
@@ -37,7 +37,7 @@ jobs:
         with:
           arch: none
           distro: none
-          base_image: arm64v8/rockylinux:9
+          base_image: arm64v8/rockylinux:9.2
           shell: /bin/bash
           dockerRunArgs: |
             --volume "${PWD}/artifacts:/artifacts"
@@ -50,7 +50,7 @@ jobs:
             mv *.rpm /artifacts
 
       - name: Clone Package Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: rockit-astro/packages
           token: ${{ secrets.DEPLOY_TOKEN }}
