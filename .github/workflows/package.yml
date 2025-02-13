@@ -7,47 +7,25 @@ on:
 
 jobs:
   linux:
+    strategy:
+      matrix:
+        os: [ ubuntu-22.04, ubuntu-22.04-arm ]
     name: RPM Packaging
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+    container: rockylinux:9
     steps:
+      - name: Install Dependencies
+        run: |
+          cat /etc/redhat-release
+          yum -y install epel-release
+          /usr/bin/crb enable
+            yum -y install git rpm-build rpm-sign make systemd-rpm-macros opencv-devel gcc
+
       - name: Clone Repository
         uses: actions/checkout@v4
 
-      - name: Package x86_64 RPM
-        uses: uraimo/run-on-arch-action@v2
-        with:
-          arch: none
-          distro: none
-          base_image: rockylinux:9
-          shell: /bin/bash
-          setup: |
-            mkdir -p "${PWD}/artifacts"
-          dockerRunArgs: |
-            --volume "${PWD}/artifacts:/artifacts"
-          run: |
-            cat /etc/redhat-release
-            yum -y install epel-release
-            yum -y config-manager --set-enabled crb
-            yum -y install rpm-build rpm-sign make systemd-rpm-macros opencv-devel gcc
-            make
-            mv *.rpm /artifacts
-
-      - name: Package aarch64 RPM
-        uses: uraimo/run-on-arch-action@v2
-        with:
-          arch: none
-          distro: none
-          base_image: arm64v8/rockylinux:9.2
-          shell: /bin/bash
-          dockerRunArgs: |
-            --volume "${PWD}/artifacts:/artifacts"
-          run: |
-            cat /etc/redhat-release
-            yum -y install epel-release
-            yum -y config-manager --set-enabled crb
-            yum -y install rpm-build rpm-sign make systemd-rpm-macros opencv-devel gcc
-            make
-            mv *.rpm /artifacts
+      - name: Package RPM
+        run: make
 
       - name: Clone Package Repository
         uses: actions/checkout@v4
@@ -59,6 +37,6 @@ jobs:
       - name: Push Packages
         env:
           RPM_SIGNING_KEY: ${{ secrets.RPM_SIGNING_KEY }}
-        run:
-          packages/sign-and-push-packages.sh artifacts/*.rpm
+        run: |
+          packages/sign-and-push-packages.sh *.rpm
 
