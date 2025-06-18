@@ -1,0 +1,42 @@
+name: "Packaging (el9)"
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  linux:
+    strategy:
+      matrix:
+        os: [ ubuntu-22.04, ubuntu-22.04-arm ]
+    name: RPM Packaging
+    runs-on: ${{ matrix.os }}
+    container: rockylinux:9
+    steps:
+      - name: Install Dependencies
+        run: |
+          cat /etc/redhat-release
+          yum -y install epel-release
+          /usr/bin/crb enable
+          yum -y install git rpm-build rpm-sign make systemd-rpm-macros opencv-devel gcc
+
+      - name: Clone Repository
+        uses: actions/checkout@v4
+
+      - name: Package RPM
+        run: make
+
+      - name: Clone Package Repository
+        uses: actions/checkout@v4
+        with:
+          repository: rockit-astro/packages
+          token: ${{ secrets.DEPLOY_TOKEN }}
+          path: packages
+
+      - name: Push Packages
+        env:
+          RPM_SIGNING_KEY: ${{ secrets.RPM_SIGNING_KEY }}
+        run: |
+          packages/sign-and-push-packages.sh *.rpm
+

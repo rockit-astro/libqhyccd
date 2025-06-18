@@ -1,4 +1,4 @@
-name: RPM Packaging
+name: "Packaging (el10)"
 
 on:
   push:
@@ -6,20 +6,19 @@ on:
       - master
 
 jobs:
-  linux:
+  build:
     strategy:
       matrix:
-        os: [ ubuntu-22.04, ubuntu-22.04-arm ]
-    name: RPM Packaging
+        os: [ ubuntu-24.04, ubuntu-24.04-arm ]
+    name: Build Package
     runs-on: ${{ matrix.os }}
-    container: rockylinux:9
+    container: rockylinux/rockylinux:10-minimal
     steps:
       - name: Install Dependencies
         run: |
-          cat /etc/redhat-release
-          yum -y install epel-release
+          microdnf -y install dnf epel-release
           /usr/bin/crb enable
-            yum -y install git rpm-build rpm-sign make systemd-rpm-macros opencv-devel gcc
+          dnf -y install git rpm-build rpm-sign make systemd-rpm-macros opencv-devel gcc gpg
 
       - name: Clone Repository
         uses: actions/checkout@v4
@@ -30,13 +29,11 @@ jobs:
       - name: Clone Package Repository
         uses: actions/checkout@v4
         with:
-          repository: rockit-astro/packages
+          repository: rockit-astro/el10
           token: ${{ secrets.DEPLOY_TOKEN }}
           path: packages
 
-      - name: Push Packages
+      - name: Sign and Push Packages
         env:
           RPM_SIGNING_KEY: ${{ secrets.RPM_SIGNING_KEY }}
-        run: |
-          packages/sign-and-push-packages.sh *.rpm
-
+        run: packages/sign-and-push-packages.sh *.rpm

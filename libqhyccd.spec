@@ -1,7 +1,7 @@
 %global __requires_exclude                     ^libqhyccd.so.20
 Name:      libqhyccd
 Version:   20230228
-Release:   2
+Release:   3%{dist}
 Url:       https://github.com/rockit-astro/libqhyccd
 Summary:   QHYCCD camera SDK repackaged for Rocky Linux
 License:   Proprietary
